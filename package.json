@@ -1,0 +1,28 @@
+{
+  "name": "notelan",
+  "version": "0.3.4",
+  "private": true,
+  "description": "Share selected Obsidian notes and folders as read-only local web pages.",
+  "author": {
+    "name": "OlivierLB",
+    "url": "https://github.com/OlivierLB"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OlivierLB/NoteLAN.git"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs development",
+    "check": "tsc --noEmit",
+    "test": "node scripts/test.mjs",
+    "smoke": "node scripts/smoke.cjs",
+    "validate": "npm run check && npm test && npm run build && npm run smoke"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.25.0",
+    "obsidian": "^1.8.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,209 @@
+.local-note-share-status {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin: 8px 0 16px;
+}
+
+.local-note-share-url {
+  font-family: var(--font-monospace);
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+
+.local-note-share-list {
+  margin-top: 12px;
+}
+
+.local-note-share-browser {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  margin: 12px 0 20px;
+  padding: 12px;
+}
+
+.local-note-share-browser-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.local-note-share-browser-path {
+  font-family: var(--font-monospace);
+  overflow-wrap: anywhere;
+}
+
+.local-note-share-browser-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin-bottom: 12px;
+}
+
+.local-note-share-browser-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.local-note-share-browser-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.local-note-share-browser-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.local-note-share-browser-entry {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.local-note-share-browser-entry {
+  background: transparent;
+  border: 0;
+  color: var(--text-normal);
+  cursor: pointer;
+  padding: 0;
+}
+
+button.local-note-share-browser-entry:hover {
+  color: var(--interactive-accent);
+}
+
+.local-note-share-note {
+  align-items: center;
+  border-top: 1px solid var(--background-modifier-border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.local-note-share-note-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.local-note-share-note-path + .local-note-share-url {
+  margin-top: 10px;
+}
+
+.side-dock-ribbon-action.local-note-share-ribbon-button.is-shared,
+.local-note-share-ribbon-button.is-shared {
+  color: var(--interactive-accent);
+}
+
+.local-note-share-statusbar {
+  align-items: center;
+  display: inline-flex;
+  gap: 10px;
+}
+
+.local-note-share-status-pill {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--font-ui-smaller);
+  padding: 1px 8px;
+}
+
+.local-note-share-status-pill.is-shared {
+  border-color: color-mix(in srgb, var(--interactive-accent) 45%, var(--background-modifier-border));
+  color: var(--interactive-accent);
+}
+
+.local-note-share-status-link {
+  align-items: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.local-note-share-status-link svg {
+  display: block;
+  height: 14px;
+  width: 14px;
+}
+
+.local-note-share-status-link:hover {
+  color: var(--interactive-accent);
+}
+.local-note-share-custom-css,
+.local-note-share-custom-css textarea {
+  width: min(100%, 42rem);
+}
+
+.local-note-share-custom-css textarea {
+  font-family: var(--font-monospace);
+  min-height: 10rem;
+  resize: vertical;
+}
+
+.local-note-share-analytics-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 12px 0;
+}
+
+.local-note-share-analytics-metric {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.local-note-share-analytics-value {
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-semibold);
+}
+
+.local-note-share-analytics-label,
+.local-note-share-analytics-path {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.local-note-share-analytics-actions {
+  border-top: 0;
+}
+
+.local-note-share-analytics-table-wrapper {
+  margin: 8px 0 24px;
+  overflow-x: auto;
+}
+
+.local-note-share-analytics-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.local-note-share-analytics-table th,
+.local-note-share-analytics-table td {
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding: 9px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.local-note-share-analytics-table th:not(:first-child),
+.local-note-share-analytics-table td:not(:first-child) {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .local-note-share-analytics-metrics {
+    grid-template-columns: 1fr;
+  }
+}

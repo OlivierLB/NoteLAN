@@ -1,0 +1,10 @@
+{
+  "id": "local-note-share",
+  "name": "NoteLAN",
+  "version": "0.3.4",
+  "minAppVersion": "1.5.0",
+  "description": "Share selected Obsidian notes or folders as read-only web pages on the local network.",
+  "author": "OlivierLB",
+  "authorUrl": "https://github.com/OlivierLB",
+  "isDesktopOnly": true
+}
