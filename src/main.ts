@@ -50,8 +50,8 @@ export default class LocalNoteSharePlugin extends Plugin {
   server: http.Server | null = null;
   shareIndex!: ShareIndex;
   notePageCache = new Map<string, { mtime: number; html: string }>();
-  autoStopTimer: ReturnType<typeof setTimeout> | null = null;
-  analyticsSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  autoStopTimer: number | null = null;
+  analyticsSaveTimer: number | null = null;
   statusBarEl!: HTMLElement;
   ribbonIconEl!: HTMLElement;
 
@@ -152,7 +152,7 @@ export default class LocalNoteSharePlugin extends Plugin {
 
   queueAnalyticsSave() {
     if (this.analyticsSaveTimer) return;
-    this.analyticsSaveTimer = setTimeout(() => {
+    this.analyticsSaveTimer = window.setTimeout(() => {
       this.analyticsSaveTimer = null;
       void this.saveData(this.settings).catch((error) => {
         console.error("Local Note Share analytics save error", error);
@@ -162,7 +162,7 @@ export default class LocalNoteSharePlugin extends Plugin {
 
   async flushAnalyticsSave() {
     if (!this.analyticsSaveTimer) return;
-    clearTimeout(this.analyticsSaveTimer);
+    window.clearTimeout(this.analyticsSaveTimer);
     this.analyticsSaveTimer = null;
     await this.saveData(this.settings);
   }
@@ -229,7 +229,7 @@ export default class LocalNoteSharePlugin extends Plugin {
   scheduleAutoStop() {
     this.clearAutoStopTimer();
     if (!this.server || this.settings.autoStopMinutes <= 0) return;
-    this.autoStopTimer = setTimeout(() => {
+    this.autoStopTimer = window.setTimeout(() => {
       void this.stopServer().then(async () => {
         await this.updateUiState();
         new Notice(this.t("serverAutoStopped"));
@@ -239,7 +239,7 @@ export default class LocalNoteSharePlugin extends Plugin {
 
   clearAutoStopTimer() {
     if (!this.autoStopTimer) return;
-    clearTimeout(this.autoStopTimer);
+    window.clearTimeout(this.autoStopTimer);
     this.autoStopTimer = null;
   }
 
@@ -471,9 +471,8 @@ export default class LocalNoteSharePlugin extends Plugin {
       return;
     }
 
-    const textArea = document.createElement("textarea");
+    const textArea = document.body.createEl("textarea");
     textArea.value = text;
-    document.body.appendChild(textArea);
     textArea.select();
     document.execCommand("copy");
     textArea.remove();
@@ -977,7 +976,7 @@ export default class LocalNoteSharePlugin extends Plugin {
         const type = unordered ? "ul" : "ol";
         if (!list || list.type !== type) flushList();
         if (!list) list = { type, items: [] };
-        list!.items.push((unordered || ordered)![1]);
+        list.items.push((unordered ?? ordered)?.[1] ?? "");
         continue;
       }
 

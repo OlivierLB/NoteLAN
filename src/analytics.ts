@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 export type AnalyticsPageKind = "index" | "note";
@@ -248,9 +248,7 @@ function parseCookies(header: string | undefined): Record<string, string> {
 }
 
 function createVisitorId(): string {
-  const bytes = new Uint8Array(24);
-  globalThis.crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return randomBytes(24).toString("hex");
 }
 
 function dayKey(timestamp: number): string {

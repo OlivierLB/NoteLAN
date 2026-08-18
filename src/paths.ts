@@ -7,7 +7,7 @@ export function parentFolderPath(folderPath: string): string {
 }
 
 export function normalizeVaultPath(value: unknown): string {
-  const raw = String(value ?? "").replace(/\\/g, "/").replace(/^\/+/, "");
+  const raw = stringValue(value).replace(/\\/g, "/").replace(/^\/+/, "");
   if (!raw || raw.includes("\0")) return "";
   const normalized = path.posix.normalize(raw);
   if (normalized === "." || normalized === ".." || normalized.startsWith("../")) return "";
@@ -15,20 +15,24 @@ export function normalizeVaultPath(value: unknown): string {
 }
 
 export function parseLinkTarget(value: unknown): { path: string; subpath: string } {
-  const clean = String(value ?? "").split("|")[0].trim().replace(/^<|>$/g, "");
+  const clean = stringValue(value).split("|")[0].trim().replace(/^<|>$/g, "");
   if (!clean) return { path: "", subpath: "" };
   const [rawPath, ...rawSubpath] = clean.split("#");
   return { path: rawPath.trim(), subpath: rawSubpath.join("#").trim() };
 }
 
 export function slugifyHeading(value: unknown): string {
-  return String(value ?? "")
+  return stringValue(value)
     .trim().toLowerCase().replace(/<[^>]+>/g, "").replace(/[`*_~[\]\\]/g, "")
     .replace(/[^\p{L}\p{N}\s-]/gu, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 }
 
 export function escapeHtml(value: unknown): string {
-  return String(value ?? "")
+  return stringValue(value)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
 }

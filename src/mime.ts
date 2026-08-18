@@ -6,5 +6,6 @@ const TYPES: Record<string, string> = {
 };
 
 export function contentTypeFor(extension: unknown): string {
-  return TYPES[String(extension ?? "").toLowerCase()] ?? "application/octet-stream";
+  const normalized = typeof extension === "string" ? extension.toLowerCase() : "";
+  return TYPES[normalized] ?? "application/octet-stream";
 }

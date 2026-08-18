@@ -1,6 +1,6 @@
 {
   "name": "notelan",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "description": "Share selected Obsidian notes and folders as read-only local web pages.",
   "author": {
@@ -11,18 +11,35 @@
     "type": "git",
     "url": "https://github.com/OlivierLB/NoteLAN.git"
   },
+  "homepage": "https://github.com/OlivierLB/NoteLAN#readme",
+  "bugs": {
+    "url": "https://github.com/OlivierLB/NoteLAN/issues"
+  },
+  "license": "MIT",
+  "main": "main.js",
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "local-network",
+    "note-sharing"
+  ],
   "scripts": {
     "build": "node esbuild.config.mjs production",
     "dev": "node esbuild.config.mjs development",
     "check": "tsc --noEmit",
+    "lint": "eslint .",
     "test": "node scripts/test.mjs",
     "smoke": "node scripts/smoke.cjs",
-    "validate": "npm run check && npm test && npm run build && npm run smoke"
+    "validate": "npm run check && npm run lint && npm test && npm run build && npm run smoke"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-obsidianmd": "^0.4.0",
     "esbuild": "^0.25.0",
+    "globals": "^17.0.0",
     "obsidian": "^1.8.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.46.0"
   }
 }

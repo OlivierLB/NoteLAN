@@ -6,7 +6,7 @@ import type { LocalNoteShareSettings } from "./settings";
 export interface LocalNoteSharePluginApi {
   settings: LocalNoteShareSettings;
   locale: Locale;
-  server: unknown | null;
+  server: object | null;
   copyShareUrl(): Promise<void>;
   copyText(text: string): Promise<void>;
   generateToken(): string;

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import {
   DEFAULT_ANALYTICS_SETTINGS,
   createEmptyAnalyticsData,
@@ -91,9 +92,7 @@ export function normalizeSettings(value: unknown): LocalNoteShareSettings {
 }
 
 export function createSecureToken(): string {
-  const bytes = new Uint8Array(24);
-  globalThis.crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return randomBytes(24).toString("hex");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

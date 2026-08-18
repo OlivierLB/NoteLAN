@@ -1,4 +1,4 @@
-import { Modal, Notice, PluginSettingTab, Setting, TFile, TFolder, setIcon, type App, type Plugin } from "obsidian";
+import { Modal, Notice, PluginSettingTab, Setting, TFile, TFolder, type App, type Plugin } from "obsidian";
 import { formatCount } from "./i18n";
 import { parentFolderPath } from "./paths";
 import type { LocalNoteSharePluginApi } from "./plugin-api";
