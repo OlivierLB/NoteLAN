@@ -184,7 +184,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "NoteLAN" });
+    new Setting(containerEl).setName(this.plugin.t("localSharing")).setHeading();
     containerEl.createDiv({
       cls: "local-note-share-status",
       text: this.plugin.server
@@ -213,13 +213,13 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       .addText((text) => {
         text
           .setPlaceholder("8099")
-          .setValue(String(this.plugin.settings.port))
+          .setValue(String(this.plugin.config.port))
           .onChange(async (value) => {
             const port = Number(value);
             if (!Number.isInteger(port) || port < 1 || port > 65535) return;
             const wasRunning = Boolean(this.plugin.server);
             if (wasRunning) await this.plugin.stopServer();
-            this.plugin.settings.port = port;
+            this.plugin.config.port = port;
             await this.plugin.saveSettings();
             if (wasRunning) await this.plugin.startServer();
             this.display();
@@ -230,8 +230,8 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       .setName(this.plugin.t("startWithObsidian"))
       .setDesc(this.plugin.t("startWithObsidianDesc"))
       .addToggle((toggle) => {
-        toggle.setValue(this.plugin.settings.autoStart).onChange(async (value) => {
-          this.plugin.settings.autoStart = value;
+        toggle.setValue(this.plugin.config.autoStart).onChange(async (value) => {
+          this.plugin.config.autoStart = value;
           await this.plugin.saveSettings();
         });
       });
@@ -246,9 +246,9 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
           .addOption("120", this.plugin.t("afterHours", { hours: 2 }))
           .addOption("240", this.plugin.t("afterHours", { hours: 4 }))
           .addOption("480", this.plugin.t("afterHours", { hours: 8 }))
-          .setValue(String(this.plugin.settings.autoStopMinutes))
+          .setValue(String(this.plugin.config.autoStopMinutes))
           .onChange(async (value) => {
-            this.plugin.settings.autoStopMinutes = Number(value);
+            this.plugin.config.autoStopMinutes = Number(value);
             await this.plugin.saveSettings();
             this.plugin.scheduleAutoStop();
           });
@@ -258,21 +258,21 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       .setName(this.plugin.t("urlToken"))
       .setDesc(this.plugin.t("urlTokenDesc"))
       .addToggle((toggle) => {
-        toggle.setValue(this.plugin.settings.requireToken).onChange(async (value) => {
-          this.plugin.settings.requireToken = value;
+        toggle.setValue(this.plugin.config.requireToken).onChange(async (value) => {
+          this.plugin.config.requireToken = value;
           await this.plugin.saveSettings();
           this.display();
         });
       })
       .addButton((button) => {
         button.setButtonText(this.plugin.t("regenerate")).onClick(async () => {
-          this.plugin.settings.token = this.plugin.generateToken();
+          this.plugin.config.token = this.plugin.generateToken();
           await this.plugin.saveSettings();
           this.display();
         });
       });
 
-    containerEl.createEl("h3", { text: this.plugin.t("anonymousStats") });
+    new Setting(containerEl).setName(this.plugin.t("anonymousStats")).setHeading();
     containerEl.createDiv({
       cls: "local-note-share-status",
       text: this.plugin.t("anonymousStatsDesc"),
@@ -282,8 +282,8 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       .setName(this.plugin.t("enableCounting"))
       .setDesc(this.plugin.t("enableCountingDesc"))
       .addToggle((toggle) => {
-        toggle.setValue(this.plugin.settings.analytics.enabled).onChange(async (value) => {
-          this.plugin.settings.analytics.enabled = value;
+        toggle.setValue(this.plugin.config.analytics.enabled).onChange(async (value) => {
+          this.plugin.config.analytics.enabled = value;
           await this.plugin.saveSettings();
           this.display();
         });
@@ -293,8 +293,8 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       .setName(this.plugin.t("ignoreComputer"))
       .setDesc(this.plugin.t("ignoreComputerDesc"))
       .addToggle((toggle) => {
-        toggle.setValue(this.plugin.settings.analytics.excludeLocalhost).onChange(async (value) => {
-          this.plugin.settings.analytics.excludeLocalhost = value;
+        toggle.setValue(this.plugin.config.analytics.excludeLocalhost).onChange(async (value) => {
+          this.plugin.config.analytics.excludeLocalhost = value;
           await this.plugin.saveSettings();
         });
       });
@@ -308,9 +308,9 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
           .addOption("30", this.plugin.t("days", { days: 30 }))
           .addOption("90", this.plugin.t("days", { days: 90 }))
           .addOption("365", this.plugin.t("oneYear"))
-          .setValue(String(this.plugin.settings.analytics.retentionDays))
+          .setValue(String(this.plugin.config.analytics.retentionDays))
           .onChange(async (value) => {
-            this.plugin.settings.analytics.retentionDays = Number(value);
+            this.plugin.config.analytics.retentionDays = Number(value);
             await this.plugin.saveSettings();
             this.display();
           });
@@ -318,19 +318,19 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
 
     this.renderAnalytics(containerEl);
 
-    containerEl.createEl("h3", { text: this.plugin.t("sharedAppearance") });
+    new Setting(containerEl).setName(this.plugin.t("sharedAppearance")).setHeading();
 
     new Setting(containerEl)
       .setName(this.plugin.t("theme"))
       .setDesc(this.plugin.t("themeDesc"))
       .addDropdown((dropdown) => {
         dropdown
-          .addOption("royal-velvet", "Royal Velvet")
+          .addOption("royal-velvet", "Royal velvet")
           .addOption("light", this.plugin.t("light"))
           .addOption("system", this.plugin.t("system"))
-          .setValue(this.plugin.settings.theme.preset)
+          .setValue(this.plugin.config.theme.preset)
           .onChange(async (value) => {
-            this.plugin.settings.theme.preset = value as ThemePreset;
+            this.plugin.config.theme.preset = value as ThemePreset;
             await this.plugin.saveSettings();
           });
       });
@@ -339,8 +339,8 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       .setName(this.plugin.t("accentColor"))
       .setDesc(this.plugin.t("accentColorDesc"))
       .addColorPicker((picker) => {
-        picker.setValue(this.plugin.settings.theme.accentColor).onChange(async (value) => {
-          this.plugin.settings.theme.accentColor = value;
+        picker.setValue(this.plugin.config.theme.accentColor).onChange(async (value) => {
+          this.plugin.config.theme.accentColor = value;
           await this.plugin.saveSettings();
         });
       });
@@ -351,10 +351,10 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       .addSlider((slider) => {
         slider
           .setLimits(560, 1600, 20)
-          .setValue(this.plugin.settings.theme.contentWidth)
+          .setValue(this.plugin.config.theme.contentWidth)
           .setDynamicTooltip()
           .onChange(async (value) => {
-            this.plugin.settings.theme.contentWidth = value;
+            this.plugin.config.theme.contentWidth = value;
             await this.plugin.saveSettings();
           });
       });
@@ -363,8 +363,8 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       .setName(this.plugin.t("showPaths"))
       .setDesc(this.plugin.t("showPathsDesc"))
       .addToggle((toggle) => {
-        toggle.setValue(this.plugin.settings.theme.showFilePaths).onChange(async (value) => {
-          this.plugin.settings.theme.showFilePaths = value;
+        toggle.setValue(this.plugin.config.theme.showFilePaths).onChange(async (value) => {
+          this.plugin.config.theme.showFilePaths = value;
           await this.plugin.saveSettings();
         });
       });
@@ -373,12 +373,14 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       .setName(this.plugin.t("font"))
       .setDesc(this.plugin.t("fontDesc"))
       .addText((text) => {
-        text.setValue(this.plugin.settings.theme.fontFamily);
-        text.inputEl.addEventListener("change", async () => {
-          const value = text.getValue().trim();
-          if (!value) return;
-          this.plugin.settings.theme.fontFamily = value;
-          await this.plugin.saveSettings();
+        text.setValue(this.plugin.config.theme.fontFamily);
+        text.inputEl.addEventListener("change", () => {
+          runAsync(async () => {
+            const value = text.getValue().trim();
+            if (!value) return;
+            this.plugin.config.theme.fontFamily = value;
+            await this.plugin.saveSettings();
+          });
         });
       });
 
@@ -386,11 +388,13 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       .setName(this.plugin.t("customCss"))
       .setDesc(this.plugin.t("customCssDesc"))
       .addTextArea((area) => {
-        area.setPlaceholder(":root { --page-bg: #111; }").setValue(this.plugin.settings.theme.customCss);
+        area.setPlaceholder(":root { --page-bg: #111; }").setValue(this.plugin.config.theme.customCss);
         area.inputEl.rows = 8;
-        area.inputEl.addEventListener("change", async () => {
-          this.plugin.settings.theme.customCss = area.getValue();
-          await this.plugin.saveSettings();
+        area.inputEl.addEventListener("change", () => {
+          runAsync(async () => {
+            this.plugin.config.theme.customCss = area.getValue();
+            await this.plugin.saveSettings();
+          });
         });
       });
     customCssSetting.controlEl.addClass("local-note-share-custom-css");
@@ -405,20 +409,22 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
             new Notice(this.plugin.t("noActiveNote"));
             return;
           }
-          this.plugin.shareNote(file).then(() => this.display());
+          void this.plugin.shareNote(file).then(() => this.display()).catch((error: unknown) => {
+            console.error("NoteLAN share error", error);
+          });
         });
       });
 
     this.renderVaultBrowser(containerEl);
 
-    containerEl.createEl("h3", { text: this.plugin.t("sharedFolders") });
+    new Setting(containerEl).setName(this.plugin.t("sharedFolders")).setHeading();
     const folderList = containerEl.createDiv({ cls: "local-note-share-list" });
 
-    if (!this.plugin.settings.sharedFolders.length) {
+    if (!this.plugin.config.sharedFolders.length) {
       folderList.createDiv({ cls: "local-note-share-status", text: this.plugin.t("noSharedFolders") });
     }
 
-    for (const folderPath of this.plugin.settings.sharedFolders) {
+    for (const folderPath of this.plugin.config.sharedFolders) {
       const row = folderList.createDiv({ cls: "local-note-share-note" });
       row.createDiv({ cls: "local-note-share-note-path", text: folderPath });
       const actions = row.createDiv();
@@ -435,15 +441,15 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         });
     }
 
-    containerEl.createEl("h3", { text: this.plugin.t("individuallySharedNotes") });
+    new Setting(containerEl).setName(this.plugin.t("individuallySharedNotes")).setHeading();
     const list = containerEl.createDiv({ cls: "local-note-share-list" });
 
-    if (!this.plugin.settings.sharedNotes.length) {
+    if (!this.plugin.config.sharedNotes.length) {
       list.createDiv({ cls: "local-note-share-status", text: this.plugin.t("noIndividualNotes") });
       return;
     }
 
-    for (const notePath of this.plugin.settings.sharedNotes) {
+    for (const notePath of this.plugin.config.sharedNotes) {
       const row = list.createDiv({ cls: "local-note-share-note" });
       row.createDiv({ cls: "local-note-share-note-path", text: notePath });
       const actions = row.createDiv();
@@ -469,7 +475,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
     this.renderMetric(metrics, this.plugin.t("today"), summary.viewsToday);
 
     const actions = new Setting(containerEl)
-      .setDesc(this.plugin.t("uniqueEstimate", { days: this.plugin.settings.analytics.retentionDays }))
+      .setDesc(this.plugin.t("uniqueEstimate", { days: this.plugin.config.analytics.retentionDays }))
       .addButton((button) => {
         button.setButtonText(this.plugin.t("clearStatistics")).setWarning().onClick(async () => {
           if (!await confirmAnalyticsReset(this.app, this.plugin)) return;
@@ -483,7 +489,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
     if (!summary.pages.length) {
       containerEl.createDiv({
         cls: "local-note-share-status",
-        text: this.plugin.settings.analytics.enabled
+        text: this.plugin.config.analytics.enabled
           ? this.plugin.t("noRemoteVisit")
           : this.plugin.t("countingDisabled"),
       });
@@ -517,8 +523,8 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
     metric.createDiv({ cls: "local-note-share-analytics-label", text: label });
   }
 
-  renderVaultBrowser(containerEl) {
-    containerEl.createEl("h3", { text: this.plugin.t("browseVault") });
+  renderVaultBrowser(containerEl: HTMLElement) {
+    new Setting(containerEl).setName(this.plugin.t("browseVault")).setHeading();
 
     const currentFolder = this.getCurrentFolder();
     const currentPath = currentFolder.path || "";
@@ -552,13 +558,15 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         text: isCurrentFolderShared ? this.plugin.t("menuUnshareFolder") : this.plugin.t("shareThisFolder"),
         cls: isCurrentFolderShared ? "mod-muted" : "mod-cta",
       });
-      folderShareButton.addEventListener("click", async () => {
-        if (isCurrentFolderShared) {
-          await this.plugin.unshareFolder(currentPath);
-        } else {
-          await this.plugin.shareFolder(currentFolder);
-        }
-        this.display();
+      folderShareButton.addEventListener("click", () => {
+        runAsync(async () => {
+          if (isCurrentFolderShared) {
+            await this.plugin.unshareFolder(currentPath);
+          } else {
+            await this.plugin.shareFolder(currentFolder);
+          }
+          this.display();
+        });
       });
     }
 
@@ -603,19 +611,21 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         text: isShared ? this.plugin.t("remove") : isInherited ? this.plugin.t("inheritedShare") : this.plugin.t("shareFolder"),
         cls: isShared || isInherited ? "mod-muted" : "mod-cta",
       });
-      shareButton.addEventListener("click", async () => {
-        if (isShared) {
-          await this.plugin.unshareFolder(folder.path);
+      shareButton.addEventListener("click", () => {
+        runAsync(async () => {
+          if (isShared) {
+            await this.plugin.unshareFolder(folder.path);
+            this.display();
+            return;
+          }
+          if (isInherited) {
+            await this.plugin.copyText(this.plugin.getFolderUrl(folder.path));
+            new Notice(this.plugin.t("folderLinkCopied"));
+            return;
+          }
+          await this.plugin.shareFolder(folder);
           this.display();
-          return;
-        }
-        if (isInherited) {
-          await this.plugin.copyText(this.plugin.getFolderUrl(folder.path));
-          new Notice(this.plugin.t("folderLinkCopied"));
-          return;
-        }
-        await this.plugin.shareFolder(folder);
-        this.display();
+        });
       });
     }
 
@@ -633,15 +643,17 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         text: isShared ? this.plugin.t("sharedFeminine") : this.plugin.t("share"),
         cls: isShared ? "mod-muted" : "mod-cta",
       });
-      shareButton.addEventListener("click", async () => {
-        if (isShared) {
-          await this.plugin.copyText(this.plugin.getNoteUrl(file.path));
-          new Notice(this.plugin.t("shareUrlCopied"));
-          return;
-        }
+      shareButton.addEventListener("click", () => {
+        runAsync(async () => {
+          if (isShared) {
+            await this.plugin.copyText(this.plugin.getNoteUrl(file.path));
+            new Notice(this.plugin.t("shareUrlCopied"));
+            return;
+          }
 
-        await this.plugin.shareNote(file);
-        this.display();
+          await this.plugin.shareNote(file);
+          this.display();
+        });
       });
     }
   }
@@ -666,4 +678,10 @@ function formatDateTime(timestamp: number, locale: "en" | "fr"): string {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(timestamp));
+}
+
+function runAsync(task: () => Promise<void>): void {
+  void task().catch((error: unknown) => {
+    console.error("NoteLAN settings action error", error);
+  });
 }

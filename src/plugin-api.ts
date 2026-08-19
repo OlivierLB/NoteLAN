@@ -4,7 +4,7 @@ import type { Locale, TranslationKey, TranslationValues } from "./i18n";
 import type { LocalNoteShareSettings } from "./settings";
 
 export interface LocalNoteSharePluginApi {
-  settings: LocalNoteShareSettings;
+  config: LocalNoteShareSettings;
   locale: Locale;
   server: object | null;
   copyShareUrl(): Promise<void>;

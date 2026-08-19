@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFile, TFolder, moment, setIcon } from "obsidian";
+import { Menu, Notice, Plugin, TAbstractFile, TFile, TFolder, moment, setIcon } from "obsidian";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -44,8 +44,11 @@ const MEDIA_EXTENSIONS = new Set([
   "mov",
 ]);
 
+type SprintBucket = "todo" | "active" | "done";
+type SprintColumn = { title: string; symbol: string; tickets: number; estimateDays: number };
+
 export default class LocalNoteSharePlugin extends Plugin {
-  declare settings: LocalNoteShareSettings;
+  config!: LocalNoteShareSettings;
   locale: Locale = "en";
   server: http.Server | null = null;
   shareIndex!: ShareIndex;
@@ -65,8 +68,8 @@ export default class LocalNoteSharePlugin extends Plugin {
 
     this.ribbonIconEl = this.addRibbonIcon("share-2", this.t("ribbonShareNote"), () => this.openCurrentNoteShareModal());
     this.ribbonIconEl.addClass("local-note-share-ribbon-button");
-    this.updateUiState();
-    this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.updateUiState()));
+    void this.updateUiState();
+    this.registerEvent(this.app.workspace.on("active-leaf-change", () => void this.updateUiState()));
     this.registerEvent(this.app.vault.on("modify", (file) => this.handleVaultModify(file)));
     this.registerEvent(this.app.vault.on("rename", (file, oldPath) => this.handleVaultRename(file, oldPath)));
     this.registerEvent(this.app.vault.on("delete", (file) => this.handleVaultDelete(file)));
@@ -85,9 +88,9 @@ export default class LocalNoteSharePlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "toggle-local-note-share-server",
+      id: "toggle-server",
       name: this.t("commandToggleServer"),
-      callback: () => this.toggleServer(),
+      callback: () => void this.toggleServer(),
     });
 
     this.addCommand({
@@ -96,7 +99,7 @@ export default class LocalNoteSharePlugin extends Plugin {
       checkCallback: (checking) => {
         const file = this.app.workspace.getActiveFile();
         if (!file) return false;
-        if (!checking) this.shareNote(file);
+        if (!checking) void this.shareNote(file);
         return true;
       },
     });
@@ -107,7 +110,7 @@ export default class LocalNoteSharePlugin extends Plugin {
       checkCallback: (checking) => {
         const file = this.app.workspace.getActiveFile();
         if (!file) return false;
-        if (!checking) this.unshareNote(file.path);
+        if (!checking) void this.unshareNote(file.path);
         return true;
       },
     });
@@ -115,25 +118,26 @@ export default class LocalNoteSharePlugin extends Plugin {
     this.addCommand({
       id: "copy-local-share-url",
       name: this.t("commandCopyUrl"),
-      callback: () => this.copyShareUrl(),
+      callback: () => void this.copyShareUrl(),
     });
 
     this.addSettingTab(new LocalNoteShareSettingTab(this.app, this));
 
-    if (this.settings.autoStart) {
-      this.app.workspace.onLayoutReady(() => this.startServer());
+    if (this.config.autoStart) {
+      this.app.workspace.onLayoutReady(() => void this.startServer());
     }
   }
 
-  async onunload() {
-    await this.stopServer();
-    await this.flushAnalyticsSave();
+  onunload(): void {
+    void Promise.all([this.stopServer(), this.flushAnalyticsSave()]).catch((error: unknown) => {
+      console.error("NoteLAN shutdown error", error);
+    });
   }
 
   async loadSettings() {
-    this.settings = normalizeSettings(await this.loadData());
-    if (!this.settings.token) {
-      this.settings.token = createSecureToken();
+    this.config = normalizeSettings(await this.loadData());
+    if (!this.config.token) {
+      this.config.token = createSecureToken();
       await this.saveSettings();
     }
   }
@@ -143,18 +147,18 @@ export default class LocalNoteSharePlugin extends Plugin {
   }
 
   async saveSettings() {
-    this.settings.sharedNotes = [...new Set(this.settings.sharedNotes)].sort();
-    this.settings.sharedFolders = [...new Set(this.settings.sharedFolders.map(normalizeVaultPath).filter(Boolean))].sort();
+    this.config.sharedNotes = [...new Set(this.config.sharedNotes)].sort();
+    this.config.sharedFolders = [...new Set(this.config.sharedFolders.map(normalizeVaultPath).filter(Boolean))].sort();
     this.shareIndex?.invalidateSelection();
     this.notePageCache.clear();
-    await this.saveData(this.settings);
+    await this.saveData(this.config);
   }
 
   queueAnalyticsSave() {
     if (this.analyticsSaveTimer) return;
     this.analyticsSaveTimer = window.setTimeout(() => {
       this.analyticsSaveTimer = null;
-      void this.saveData(this.settings).catch((error) => {
+      void this.saveData(this.config).catch((error) => {
         console.error("Local Note Share analytics save error", error);
       });
     }, 1_000);
@@ -164,18 +168,18 @@ export default class LocalNoteSharePlugin extends Plugin {
     if (!this.analyticsSaveTimer) return;
     window.clearTimeout(this.analyticsSaveTimer);
     this.analyticsSaveTimer = null;
-    await this.saveData(this.settings);
+    await this.saveData(this.config);
   }
 
   getAnalyticsSummary() {
     return summarizeAnalytics(
-      this.settings.analyticsData,
-      this.settings.analytics.retentionDays,
+      this.config.analyticsData,
+      this.config.analytics.retentionDays,
     );
   }
 
   async resetAnalytics() {
-    this.settings.analyticsData = createEmptyAnalyticsData();
+    this.config.analyticsData = createEmptyAnalyticsData();
     await this.saveSettings();
   }
 
@@ -203,17 +207,17 @@ export default class LocalNoteSharePlugin extends Plugin {
 
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
-      server.listen(Number(this.settings.port), "0.0.0.0", () => {
+      server.listen(Number(this.config.port), "0.0.0.0", () => {
         server.off("error", reject);
         resolve();
       });
     });
 
     this.scheduleAutoStop();
-    const duration = this.settings.autoStopMinutes
-      ? this.t("serverDurationHours", { hours: this.settings.autoStopMinutes / 60 })
+    const duration = this.config.autoStopMinutes
+      ? this.t("serverDurationHours", { hours: this.config.autoStopMinutes / 60 })
       : this.t("serverDurationManual");
-    const protection = this.settings.requireToken ? this.t("serverProtected") : this.t("serverUnprotected");
+    const protection = this.config.requireToken ? this.t("serverProtected") : this.t("serverUnprotected");
     new Notice(this.t("serverStarted", { duration, protection, url: this.getShareUrl() }), 9000);
   }
 
@@ -228,13 +232,13 @@ export default class LocalNoteSharePlugin extends Plugin {
 
   scheduleAutoStop() {
     this.clearAutoStopTimer();
-    if (!this.server || this.settings.autoStopMinutes <= 0) return;
+    if (!this.server || this.config.autoStopMinutes <= 0) return;
     this.autoStopTimer = window.setTimeout(() => {
       void this.stopServer().then(async () => {
         await this.updateUiState();
         new Notice(this.t("serverAutoStopped"));
       });
-    }, this.settings.autoStopMinutes * 60_000);
+    }, this.config.autoStopMinutes * 60_000);
   }
 
   clearAutoStopTimer() {
@@ -243,14 +247,14 @@ export default class LocalNoteSharePlugin extends Plugin {
     this.autoStopTimer = null;
   }
 
-  async shareNote(file) {
+  async shareNote(file: TFile) {
     if (!(file instanceof TFile) || file.extension !== "md") {
       new Notice(this.t("markdownOnly"));
       return;
     }
 
-    if (!this.settings.sharedNotes.includes(file.path)) {
-      this.settings.sharedNotes.push(file.path);
+    if (!this.config.sharedNotes.includes(file.path)) {
+      this.config.sharedNotes.push(file.path);
       await this.saveSettings();
     }
 
@@ -260,23 +264,23 @@ export default class LocalNoteSharePlugin extends Plugin {
     new Notice(this.t("noteShared"));
   }
 
-  async unshareNote(filePath) {
-    this.settings.sharedNotes = this.settings.sharedNotes.filter((path) => path !== filePath);
+  async unshareNote(filePath: string) {
+    this.config.sharedNotes = this.config.sharedNotes.filter((path) => path !== filePath);
     await this.saveSettings();
     await this.updateUiState();
     new Notice(this.t("noteUnshared"));
   }
 
-  async shareFolder(folder) {
+  async shareFolder(folder: TFolder) {
     if (!(folder instanceof TFolder) || !folder.path) {
       new Notice(this.t("selectFolder"));
       return;
     }
-    if (!this.settings.sharedFolders.includes(folder.path)) {
+    if (!this.config.sharedFolders.includes(folder.path)) {
       const files = this.getFilesInFolder(folder.path);
       const confirmed = await confirmFolderShare(this.app, this, folder.path, files.length);
       if (!confirmed) return;
-      this.settings.sharedFolders.push(folder.path);
+      this.config.sharedFolders.push(folder.path);
       await this.saveSettings();
     }
     if (!this.server) await this.startServer();
@@ -288,29 +292,29 @@ export default class LocalNoteSharePlugin extends Plugin {
     }));
   }
 
-  async unshareFolder(folderPath) {
+  async unshareFolder(folderPath: string) {
     const normalized = normalizeVaultPath(folderPath);
-    this.settings.sharedFolders = this.settings.sharedFolders.filter((storedPath) => storedPath !== normalized);
+    this.config.sharedFolders = this.config.sharedFolders.filter((storedPath) => storedPath !== normalized);
     await this.saveSettings();
     await this.updateUiState();
     new Notice(this.t("folderUnshared"));
   }
 
-  isFolderExplicitlyShared(folderPath) {
-    return this.settings.sharedFolders.includes(normalizeVaultPath(folderPath));
+  isFolderExplicitlyShared(folderPath: string) {
+    return this.config.sharedFolders.includes(normalizeVaultPath(folderPath));
   }
 
-  isPathInSharedFolder(filePath) {
+  isPathInSharedFolder(filePath: string) {
     const normalized = normalizeVaultPath(filePath);
-    return this.settings.sharedFolders.some((folderPath) => normalized.startsWith(`${folderPath}/`));
+    return this.config.sharedFolders.some((folderPath) => normalized.startsWith(`${folderPath}/`));
   }
 
-  getFilesInFolder(folderPath) {
+  getFilesInFolder(folderPath: string) {
     return this.shareIndex.filesInFolder(folderPath);
   }
 
   getSharedFilePaths() {
-    return this.shareIndex.getSharedPaths(this.settings.sharedNotes, this.settings.sharedFolders);
+    return this.shareIndex.getSharedPaths(this.config.sharedNotes, this.config.sharedFolders);
   }
 
   getSharedNotePaths() {
@@ -320,15 +324,15 @@ export default class LocalNoteSharePlugin extends Plugin {
     });
   }
 
-  isNotePathShared(filePath) {
-    return this.settings.sharedNotes.includes(filePath) || this.isPathInSharedFolder(filePath);
+  isNotePathShared(filePath: string) {
+    return this.config.sharedNotes.includes(filePath) || this.isPathInSharedFolder(filePath);
   }
 
-  isNoteExplicitlyShared(filePath) {
-    return this.settings.sharedNotes.includes(filePath);
+  isNoteExplicitlyShared(filePath: string) {
+    return this.config.sharedNotes.includes(filePath);
   }
 
-  addFileMenuItems(menu, file) {
+  addFileMenuItems(menu: Menu, file: TAbstractFile) {
     if (!(file instanceof TFolder) || !file.path) return;
     const isShared = this.isFolderExplicitlyShared(file.path);
     menu.addItem((item) => {
@@ -351,7 +355,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     new CurrentNoteShareModal(this.app, this).open();
   }
 
-  isNoteShared(file) {
+  isNoteShared(file: TFile | null) {
     return file instanceof TFile && this.isNotePathShared(file.path);
   }
 
@@ -387,18 +391,20 @@ export default class LocalNoteSharePlugin extends Plugin {
     shareStateEl.title = isSharedByFolder
       ? this.t("statusSharedFolderTitle")
       : isShared ? this.t("statusUnshareTitle") : this.t("statusShareTitle");
-    shareStateEl.addEventListener("click", async (event) => {
+    shareStateEl.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      if (isSharedByFolder) {
-        if (!this.server) await this.startServer();
-        await this.copyText(this.getNoteUrl(file.path));
-        new Notice(this.t("linkCopiedFolderManaged"));
-      } else if (isShared) {
-        await this.unshareNote(file.path);
-      } else {
-        await this.shareNote(file);
-      }
+      runAsync(async () => {
+        if (isSharedByFolder) {
+          if (!this.server) await this.startServer();
+          await this.copyText(this.getNoteUrl(file.path));
+          new Notice(this.t("linkCopiedFolderManaged"));
+        } else if (isShared) {
+          await this.unshareNote(file.path);
+        } else {
+          await this.shareNote(file);
+        }
+      });
     });
 
     if (!isShared) return;
@@ -408,27 +414,29 @@ export default class LocalNoteSharePlugin extends Plugin {
     });
     setIcon(copyLinkEl, "link");
     copyLinkEl.title = this.t("copySharedLink");
-    copyLinkEl.addEventListener("click", async (event) => {
+    copyLinkEl.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      if (!this.server) await this.startServer();
-      await this.copyText(this.getNoteUrl(file.path));
-      new Notice(this.t("linkCopied"));
+      runAsync(async () => {
+        if (!this.server) await this.startServer();
+        await this.copyText(this.getNoteUrl(file.path));
+        new Notice(this.t("linkCopied"));
+      });
     });
   }
 
-  async handleVaultModify(file) {
+  async handleVaultModify(file: TAbstractFile) {
     if (file instanceof TFile) this.notePageCache.delete(file.path);
     const activeFile = this.app.workspace.getActiveFile();
     if (!(file instanceof TFile) || !activeFile || file.path !== activeFile.path) return;
     await this.updateStatusBar();
   }
 
-  async handleVaultRename(file, oldPath) {
+  async handleVaultRename(file: TAbstractFile, oldPath: string) {
     this.shareIndex.invalidate();
     this.notePageCache.delete(oldPath);
     let changed = false;
-    const replacePath = (storedPath) => {
+    const replacePath = (storedPath: string) => {
       if (storedPath === oldPath) {
         changed = true;
         return file.path;
@@ -439,22 +447,22 @@ export default class LocalNoteSharePlugin extends Plugin {
       }
       return storedPath;
     };
-    this.settings.sharedNotes = this.settings.sharedNotes.map(replacePath);
-    this.settings.sharedFolders = this.settings.sharedFolders.map(replacePath);
+    this.config.sharedNotes = this.config.sharedNotes.map(replacePath);
+    this.config.sharedFolders = this.config.sharedFolders.map(replacePath);
     if (changed) await this.saveSettings();
     await this.updateUiState();
   }
 
-  async handleVaultDelete(file) {
+  async handleVaultDelete(file: TAbstractFile) {
     this.shareIndex.invalidate();
     this.notePageCache.delete(file.path);
     const deletedPath = file.path;
-    const keepPath = (storedPath) => storedPath !== deletedPath && !storedPath.startsWith(`${deletedPath}/`);
-    const sharedNotes = this.settings.sharedNotes.filter(keepPath);
-    const sharedFolders = this.settings.sharedFolders.filter(keepPath);
-    if (sharedNotes.length === this.settings.sharedNotes.length && sharedFolders.length === this.settings.sharedFolders.length) return;
-    this.settings.sharedNotes = sharedNotes;
-    this.settings.sharedFolders = sharedFolders;
+    const keepPath = (storedPath: string) => storedPath !== deletedPath && !storedPath.startsWith(`${deletedPath}/`);
+    const sharedNotes = this.config.sharedNotes.filter(keepPath);
+    const sharedFolders = this.config.sharedFolders.filter(keepPath);
+    if (sharedNotes.length === this.config.sharedNotes.length && sharedFolders.length === this.config.sharedFolders.length) return;
+    this.config.sharedNotes = sharedNotes;
+    this.config.sharedFolders = sharedFolders;
     await this.saveSettings();
     await this.updateUiState();
   }
@@ -465,7 +473,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     new Notice(this.t("shareUrlCopied"));
   }
 
-  async copyText(text) {
+  async copyText(text: string) {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
       return;
@@ -478,7 +486,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     textArea.remove();
   }
 
-  async handleRequest(req, res) {
+  async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
     if (!this.isAllowedRemoteAddress(req.socket.remoteAddress)) {
       this.sendText(res, 403, "Forbidden");
       return;
@@ -517,11 +525,11 @@ export default class LocalNoteSharePlugin extends Plugin {
     this.sendHtml(res, 404, this.renderPage(this.t("notFoundTitle"), `<p>${this.t("pageNotFound")}</p>`));
   }
 
-  isAuthorized(url) {
-    return !this.settings.requireToken || url.searchParams.get("token") === this.settings.token;
+  isAuthorized(url: URL) {
+    return !this.config.requireToken || url.searchParams.get("token") === this.config.token;
   }
 
-  isAllowedRemoteAddress(address) {
+  isAllowedRemoteAddress(address: string | undefined) {
     if (!address) return false;
     const normalized = address.replace(/^::ffff:/, "");
 
@@ -538,21 +546,21 @@ export default class LocalNoteSharePlugin extends Plugin {
     return normalized.startsWith("fe80:");
   }
 
-  trackPageVisit(req, res, page: AnalyticsPage) {
-    if (!this.settings.analytics.enabled || req.method !== "GET") return;
-    if (this.settings.analytics.excludeLocalhost && isLoopbackAddress(req.socket.remoteAddress)) return;
+  trackPageVisit(req: http.IncomingMessage, res: http.ServerResponse, page: AnalyticsPage) {
+    if (!this.config.analytics.enabled || req.method !== "GET") return;
+    if (this.config.analytics.excludeLocalhost && isLoopbackAddress(req.socket.remoteAddress)) return;
 
-    const visitorHash = getAnonymousVisitorHash(req, res, this.settings.token);
+    const visitorHash = getAnonymousVisitorHash(req, res, this.config.token);
     recordAnalyticsVisit(
-      this.settings.analyticsData,
+      this.config.analyticsData,
       visitorHash,
       page,
-      this.settings.analytics.retentionDays,
+      this.config.analytics.retentionDays,
     );
     this.queueAnalyticsSave();
   }
 
-  async sendNote(req, res, notePath) {
+  async sendNote(req: http.IncomingMessage, res: http.ServerResponse, notePath: string) {
     if (!this.isNotePathShared(notePath)) {
       this.sendHtml(res, 404, this.renderPage(this.t("noteNotSharedTitle"), `<p>${this.t("noteNotShared")}</p>`));
       return;
@@ -584,7 +592,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     this.sendHtml(res, 200, html);
   }
 
-  async sendAsset(res, assetPath) {
+  async sendAsset(res: http.ServerResponse, assetPath: string) {
     if (!this.isAllowedAsset(assetPath)) {
       this.sendText(res, 404, "Not found");
       return;
@@ -604,7 +612,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     res.end(Buffer.from(buffer));
   }
 
-  isAllowedAsset(assetPath) {
+  isAllowedAsset(assetPath: string) {
     const file = this.app.vault.getAbstractFileByPath(assetPath);
     if (!(file instanceof TFile)) return false;
     if (this.isPathInSharedFolder(assetPath)) return true;
@@ -691,7 +699,7 @@ export default class LocalNoteSharePlugin extends Plugin {
         <a href="${this.noteHref(notePath)}" class="entry-main">
           <span class="entry-kicker">${this.t("note")}</span>
           <span class="entry-title">${escapeHtml(title)}</span>
-          ${this.settings.theme.showFilePaths ? `<span class="entry-meta">${escapeHtml(notePath)}</span>` : ""}
+          ${this.config.theme.showFilePaths ? `<span class="entry-meta">${escapeHtml(notePath)}</span>` : ""}
         </a>
       </li>`)
       .join("");
@@ -701,7 +709,7 @@ export default class LocalNoteSharePlugin extends Plugin {
         <a href="${this.assetHref(filePath)}" class="entry-main">
           <span class="entry-kicker">${this.t("file")}</span>
           <span class="entry-title">${escapeHtml(title)}</span>
-          ${this.settings.theme.showFilePaths ? `<span class="entry-meta">${escapeHtml(filePath)}</span>` : ""}
+          ${this.config.theme.showFilePaths ? `<span class="entry-meta">${escapeHtml(filePath)}</span>` : ""}
         </a>
       </li>`)
       .join("");
@@ -741,11 +749,11 @@ export default class LocalNoteSharePlugin extends Plugin {
     return this.renderPage(this.t("sharedFiles"), body);
   }
 
-  stripFrontmatter(markdown) {
+  stripFrontmatter(markdown: string) {
     return String(markdown || "").replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
   }
 
-  parseSharedSprintTicketTable(markdown) {
+  parseSharedSprintTicketTable(markdown: string): Array<{ status: string; estimateDays: number }> {
     const headingMatch = String(markdown || "").match(/^##\s+Tickets du sprint\b.*$/im);
     if (!headingMatch) return [];
 
@@ -772,7 +780,7 @@ export default class LocalNoteSharePlugin extends Plugin {
       .slice(1, -1)
       .map((cell) => normalizeText(cell));
 
-    const findIndex = (needle, fallbackIndex) => {
+    const findIndex = (needle: string, fallbackIndex: number) => {
       const index = headers.findIndex((header) => header.includes(needle));
       return index >= 0 ? index : fallbackIndex;
     };
@@ -799,14 +807,14 @@ export default class LocalNoteSharePlugin extends Plugin {
     return rows;
   }
 
-  classifySharedSprintStatus(status) {
+  classifySharedSprintStatus(status: string): SprintBucket {
     const normalized = normalizeText(status);
     if (normalized === "to do" || normalized === "todo") return "todo";
     if (["done", "complete", "completed"].includes(normalized)) return "done";
     return "active";
   }
 
-  buildShareSquareGrid(count, columns = 4, symbol = "■") {
+  buildShareSquareGrid(count: number, columns = 4, symbol = "■") {
     if (!count) return "·";
     const cells = Array.from({ length: count }, () => symbol);
     const lines: string[] = [];
@@ -816,13 +824,13 @@ export default class LocalNoteSharePlugin extends Plugin {
     return lines.join("\n");
   }
 
-  renderSharedSprintDashboard(markdown) {
+  renderSharedSprintDashboard(markdown: string) {
     const tickets = this.parseSharedSprintTicketTable(markdown);
     if (!tickets.length) {
       return `<div class="shared-sprint-empty">${this.t("dashboardUnavailable")}</div>`;
     }
 
-    const columns = {
+    const columns: Record<SprintBucket, SprintColumn> = {
       todo: { title: this.t("sprintTodo"), symbol: "□", tickets: 0, estimateDays: 0 },
       active: { title: this.t("sprintActive"), symbol: "▧", tickets: 0, estimateDays: 0 },
       done: { title: this.t("sprintDone"), symbol: "■", tickets: 0, estimateDays: 0 }
@@ -837,7 +845,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     const totalDays = Object.values(columns).reduce((sum, column) => sum + column.estimateDays, 0);
     const doneDays = columns.done.estimateDays;
     const remainingDays = columns.todo.estimateDays + columns.active.estimateDays;
-    const items = ["todo", "active", "done"]
+    const items = (["todo", "active", "done"] as const)
       .map((key) => {
         const column = columns[key];
         const squares = Math.max(0, Math.round(column.estimateDays));
@@ -863,7 +871,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     `;
   }
 
-  renderTable(tableLines, sourcePath) {
+  renderTable(tableLines: string[], sourcePath: string) {
     if (tableLines.length < 2) return "";
     const rows = tableLines.map((line) =>
       line.trim().split("|").slice(1, -1).map((cell) => cell.trim())
@@ -885,7 +893,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     `;
   }
 
-  renderMarkdown(markdown, sourcePath) {
+  renderMarkdown(markdown: string, sourcePath: string) {
     const rawMarkdown = this.stripFrontmatter(markdown);
     const lines = rawMarkdown.replace(/\r\n/g, "\n").split("\n");
     const blocks: string[] = [];
@@ -997,16 +1005,16 @@ export default class LocalNoteSharePlugin extends Plugin {
     return blocks.join("\n");
   }
 
-  renderInline(text, sourcePath) {
+  renderInline(text: string, sourcePath: string) {
     let value = escapeHtml(text);
 
-    value = value.replace(/!\[\[([^\]]+)]]/g, (_match, target) => {
+    value = value.replace(/!\[\[([^\]]+)]]/g, (_match: string, target: string) => {
       const resolved = this.resolveLinkTarget(target, sourcePath);
       if (!resolved?.path || !this.isAllowedAsset(resolved.path)) return "";
       return `<img src="${this.assetHref(resolved.path)}" alt="">`;
     });
 
-    value = value.replace(/\[\[([^\]]+)]]/g, (_match, target) => {
+    value = value.replace(/\[\[([^\]]+)]]/g, (_match: string, target: string) => {
       const [rawTarget, rawAlias] = target.split("|");
       const parsedTarget = parseLinkTarget(rawTarget);
       const label = rawAlias || parsedTarget.path || parsedTarget.subpath;
@@ -1021,13 +1029,13 @@ export default class LocalNoteSharePlugin extends Plugin {
       return escapeHtml(label);
     });
 
-    value = value.replace(/!\[([^\]]*)]\(([^)]+)\)/g, (_match, alt, target) => {
+    value = value.replace(/!\[([^\]]*)]\(([^)]+)\)/g, (_match: string, alt: string, target: string) => {
       const resolved = this.resolveLinkTarget(target, sourcePath);
       if (!resolved?.path || !this.isAllowedAsset(resolved.path)) return "";
       return `<img src="${this.assetHref(resolved.path)}" alt="${escapeHtml(alt)}">`;
     });
 
-    value = value.replace(/\[([^\]]+)]\(([^)]+)\)/g, (_match, label, target) => {
+    value = value.replace(/\[([^\]]+)]\(([^)]+)\)/g, (_match: string, label: string, target: string) => {
       const trimmedTarget = String(target || "").trim();
       if (/^https?:\/\//i.test(trimmedTarget)) {
         return `<a class="external-link" href="${escapeHtml(trimmedTarget)}" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
@@ -1052,7 +1060,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     return value;
   }
 
-  resolveLinkTarget(linkText, sourcePath) {
+  resolveLinkTarget(linkText: string, sourcePath: string): { path: string; subpath: string } | null {
     const parsed = parseLinkTarget(linkText);
     if (!parsed.path) return null;
 
@@ -1074,11 +1082,11 @@ export default class LocalNoteSharePlugin extends Plugin {
     };
   }
 
-  headingIdFor(text) {
+  headingIdFor(text: string) {
     return slugifyHeading(text);
   }
 
-  renderPage(title, body, notePath = "") {
+  renderPage(title: string, body: string, notePath = "") {
     const back = notePath ? `<a class="back" href="${this.indexHref()}">${this.t("sharedNotes")}</a>` : "";
     return `<!doctype html>
 <html lang="${this.locale}">
@@ -1086,7 +1094,7 @@ export default class LocalNoteSharePlugin extends Plugin {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)}</title>
-  <style>${pageStyles(this.settings.theme)}</style>
+  <style>${pageStyles(this.config.theme)}</style>
 </head>
 <body>
   <main>
@@ -1098,12 +1106,12 @@ export default class LocalNoteSharePlugin extends Plugin {
 </html>`;
   }
 
-  noteHref(notePath, subpath = "") {
+  noteHref(notePath: string, subpath = "") {
     const hash = subpath ? `#${encodeURIComponent(slugifyHeading(subpath))}` : "";
     return `/note/${encodeURIComponent(notePath)}${this.tokenQuery()}${hash}`;
   }
 
-  assetHref(assetPath) {
+  assetHref(assetPath: string) {
     return `/asset?path=${encodeURIComponent(assetPath)}${this.tokenAssetQuery()}`;
   }
 
@@ -1112,28 +1120,28 @@ export default class LocalNoteSharePlugin extends Plugin {
     if (!folder) return `/${this.tokenQuery()}`;
     const params = new URLSearchParams();
     params.set("folder", folder);
-    if (this.settings.requireToken) params.set("token", this.settings.token);
+    if (this.config.requireToken) params.set("token", this.config.token);
     return `/?${params.toString()}`;
   }
 
   tokenQuery() {
-    return this.settings.requireToken ? `?token=${encodeURIComponent(this.settings.token)}` : "";
+    return this.config.requireToken ? `?token=${encodeURIComponent(this.config.token)}` : "";
   }
 
   tokenAssetQuery() {
-    return this.settings.requireToken ? `&token=${encodeURIComponent(this.settings.token)}` : "";
+    return this.config.requireToken ? `&token=${encodeURIComponent(this.config.token)}` : "";
   }
 
   getShareUrl() {
-    return `http://${this.getLocalIpAddress()}:${this.settings.port}${this.tokenQuery()}`;
+    return `http://${this.getLocalIpAddress()}:${this.config.port}${this.tokenQuery()}`;
   }
 
-  getFolderUrl(folderPath) {
-    return `http://${this.getLocalIpAddress()}:${this.settings.port}${this.indexHref(folderPath)}`;
+  getFolderUrl(folderPath: string) {
+    return `http://${this.getLocalIpAddress()}:${this.config.port}${this.indexHref(folderPath)}`;
   }
 
-  getNoteUrl(notePath) {
-    return `http://${this.getLocalIpAddress()}:${this.settings.port}${this.noteHref(notePath)}`;
+  getNoteUrl(notePath: string) {
+    return `http://${this.getLocalIpAddress()}:${this.config.port}${this.noteHref(notePath)}`;
   }
 
   getLocalIpAddress() {
@@ -1146,7 +1154,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     return "127.0.0.1";
   }
 
-  sendHtml(res, status, html) {
+  sendHtml(res: http.ServerResponse, status: number, html: string) {
     res.writeHead(status, {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
@@ -1157,7 +1165,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     res.end(html);
   }
 
-  sendText(res, status, text) {
+  sendText(res: http.ServerResponse, status: number, text: string) {
     res.writeHead(status, {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-store",
@@ -1171,10 +1179,16 @@ export default class LocalNoteSharePlugin extends Plugin {
 };
 
 
-function normalizeText(value) {
-  return String(value || "")
+function normalizeText(value: string) {
+  return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function runAsync(task: () => Promise<void>): void {
+  void task().catch((error: unknown) => {
+    console.error("NoteLAN action error", error);
+  });
 }

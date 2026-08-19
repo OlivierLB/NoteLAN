@@ -2,6 +2,13 @@
 
 All notable changes to NoteLAN are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
+## [0.3.6] - 2026-08-19
+
+### Changed
+
+- Updated the manifest description to comply with the community plugin guidelines.
+- Limited folder indexing to explicitly shared folders instead of enumerating the entire vault.
+
 ## [0.3.5] - 2026-08-18
 
 ### Added
@@ -27,5 +34,6 @@ All notable changes to NoteLAN are documented here. This project follows [Semant
 - Automatic English and French localization.
 - Local-network access controls, URL tokens, and security headers.
 
+[0.3.6]: https://github.com/OlivierLB/NoteLAN/compare/0.3.5...0.3.6
 [0.3.5]: https://github.com/OlivierLB/NoteLAN/compare/0.3.4...0.3.5
 [0.3.4]: https://github.com/OlivierLB/NoteLAN/tree/0.3.4
