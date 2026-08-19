@@ -15,7 +15,7 @@ Requirements:
 
 - Node.js 22 or newer
 - npm
-- Obsidian desktop 1.5.0 or newer
+- Obsidian desktop 1.13.0 or newer
 
 ```bash
 git clone https://github.com/OlivierLB/NoteLAN.git

@@ -2,6 +2,14 @@
 
 All notable changes to NoteLAN are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
+## [0.3.7] - 2026-08-19
+
+### Changed
+
+- Adopted the declarative settings API introduced in Obsidian 1.13.0 so settings participate in search.
+- Replaced deprecated destructive-button, slider-tooltip, and clipboard fallback APIs.
+- Raised the minimum supported Obsidian version to 1.13.0.
+
 ## [0.3.6] - 2026-08-19
 
 ### Changed
@@ -34,6 +42,7 @@ All notable changes to NoteLAN are documented here. This project follows [Semant
 - Automatic English and French localization.
 - Local-network access controls, URL tokens, and security headers.
 
+[0.3.7]: https://github.com/OlivierLB/NoteLAN/compare/0.3.6...0.3.7
 [0.3.6]: https://github.com/OlivierLB/NoteLAN/compare/0.3.5...0.3.6
 [0.3.5]: https://github.com/OlivierLB/NoteLAN/compare/0.3.4...0.3.5
 [0.3.4]: https://github.com/OlivierLB/NoteLAN/tree/0.3.4

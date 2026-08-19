@@ -474,16 +474,7 @@ export default class LocalNoteSharePlugin extends Plugin {
   }
 
   async copyText(text: string) {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return;
-    }
-
-    const textArea = document.body.createEl("textarea");
-    textArea.value = text;
-    textArea.select();
-    document.execCommand("copy");
-    textArea.remove();
+    await navigator.clipboard.writeText(text);
   }
 
   async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {

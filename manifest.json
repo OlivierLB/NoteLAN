@@ -1,8 +1,8 @@
 {
   "id": "local-note-share",
   "name": "NoteLAN",
-  "version": "0.3.6",
-  "minAppVersion": "1.5.0",
+  "version": "0.3.7",
+  "minAppVersion": "1.13.0",
   "description": "Share selected notes or folders as read-only web pages on the local network.",
   "author": "OlivierLB",
   "authorUrl": "https://github.com/OlivierLB",
