@@ -83,7 +83,7 @@ The technical plugin ID remains `local-note-share` to preserve compatibility wit
 
 ## Compatibility
 
-- Obsidian `1.13.0` or newer
+- Obsidian `1.5.0` or newer
 - Desktop app only (Windows, macOS, or Linux)
 - A private local network shared by the host and visitor devices
 

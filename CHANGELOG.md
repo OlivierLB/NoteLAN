@@ -2,6 +2,16 @@
 
 All notable changes to NoteLAN are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
+## [0.3.8] - 2026-08-19
+
+### Fixed
+
+- Restored the complete settings interface after the declarative settings regression in 0.3.7.
+
+### Changed
+
+- Restored compatibility with Obsidian 1.5.0 and newer.
+
 ## [0.3.7] - 2026-08-19
 
 ### Changed
@@ -42,6 +52,7 @@ All notable changes to NoteLAN are documented here. This project follows [Semant
 - Automatic English and French localization.
 - Local-network access controls, URL tokens, and security headers.
 
+[0.3.8]: https://github.com/OlivierLB/NoteLAN/compare/0.3.7...0.3.8
 [0.3.7]: https://github.com/OlivierLB/NoteLAN/compare/0.3.6...0.3.7
 [0.3.6]: https://github.com/OlivierLB/NoteLAN/compare/0.3.5...0.3.6
 [0.3.5]: https://github.com/OlivierLB/NoteLAN/compare/0.3.4...0.3.5

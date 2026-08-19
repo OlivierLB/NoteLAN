@@ -1,14 +1,4 @@
-import {
-  Modal,
-  Notice,
-  PluginSettingTab,
-  Setting,
-  TFile,
-  TFolder,
-  type App,
-  type Plugin,
-  type SettingDefinitionItem,
-} from "obsidian";
+import { Modal, Notice, PluginSettingTab, Setting, TFile, TFolder, type App, type Plugin } from "obsidian";
 import { formatCount } from "./i18n";
 import { parentFolderPath } from "./paths";
 import type { LocalNoteSharePluginApi } from "./plugin-api";
@@ -45,7 +35,7 @@ class AnalyticsResetConfirmationModal extends Modal {
     });
     new Setting(this.contentEl)
       .addButton((button) => button.setButtonText(this.plugin.t("cancel")).onClick(() => this.finish(false)))
-      .addButton((button) => button.setButtonText(this.plugin.t("clear")).setDestructive().onClick(() => this.finish(true)));
+      .addButton((button) => button.setButtonText(this.plugin.t("clear")).setWarning().onClick(() => this.finish(true)));
   }
 
   onClose() {
@@ -92,7 +82,7 @@ class FolderShareConfirmationModal extends Modal {
         button.setButtonText(this.plugin.t("cancel")).onClick(() => this.finish(false));
       })
       .addButton((button) => {
-        button.setButtonText(this.plugin.t("shareFolder")).setDestructive().onClick(() => this.finish(true));
+        button.setButtonText(this.plugin.t("shareFolder")).setWarning().onClick(() => this.finish(true));
       });
   }
 
@@ -190,24 +180,9 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
     this.currentFolder = "";
   }
 
-  getSettingDefinitions(): SettingDefinitionItem[] {
-    return [{
-      name: this.plugin.t("localSharing"),
-      aliases: [
-        this.plugin.t("localServer"),
-        this.plugin.t("port"),
-        this.plugin.t("autoStop"),
-        this.plugin.t("urlToken"),
-        this.plugin.t("anonymousStats"),
-        this.plugin.t("theme"),
-        this.plugin.t("customCss"),
-        this.plugin.t("browseVault"),
-        this.plugin.t("sharedFolders"),
-        this.plugin.t("individuallySharedNotes"),
-      ],
-      render: (rootSetting) => {
-        const containerEl = rootSetting.settingEl;
-        containerEl.empty();
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
 
     new Setting(containerEl).setName(this.plugin.t("localSharing")).setHeading();
     containerEl.createDiv({
@@ -225,7 +200,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         if (!this.plugin.server) button.setCta();
         button.onClick(async () => {
           await this.plugin.toggleServer();
-          this.update();
+          this.display();
         });
       })
       .addButton((button) => {
@@ -247,7 +222,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
             this.plugin.config.port = port;
             await this.plugin.saveSettings();
             if (wasRunning) await this.plugin.startServer();
-            this.update();
+            this.display();
           });
       });
 
@@ -286,14 +261,14 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         toggle.setValue(this.plugin.config.requireToken).onChange(async (value) => {
           this.plugin.config.requireToken = value;
           await this.plugin.saveSettings();
-          this.update();
+          this.display();
         });
       })
       .addButton((button) => {
         button.setButtonText(this.plugin.t("regenerate")).onClick(async () => {
           this.plugin.config.token = this.plugin.generateToken();
           await this.plugin.saveSettings();
-          this.update();
+          this.display();
         });
       });
 
@@ -310,7 +285,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         toggle.setValue(this.plugin.config.analytics.enabled).onChange(async (value) => {
           this.plugin.config.analytics.enabled = value;
           await this.plugin.saveSettings();
-          this.update();
+          this.display();
         });
       });
 
@@ -337,7 +312,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.config.analytics.retentionDays = Number(value);
             await this.plugin.saveSettings();
-            this.update();
+            this.display();
           });
       });
 
@@ -377,6 +352,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         slider
           .setLimits(560, 1600, 20)
           .setValue(this.plugin.config.theme.contentWidth)
+          .setDynamicTooltip()
           .onChange(async (value) => {
             this.plugin.config.theme.contentWidth = value;
             await this.plugin.saveSettings();
@@ -433,7 +409,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
             new Notice(this.plugin.t("noActiveNote"));
             return;
           }
-          void this.plugin.shareNote(file).then(() => this.update()).catch((error: unknown) => {
+          void this.plugin.shareNote(file).then(() => this.display()).catch((error: unknown) => {
             console.error("NoteLAN share error", error);
           });
         });
@@ -460,7 +436,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         .addButton((button) => {
           button.setButtonText(this.plugin.t("remove")).onClick(async () => {
             await this.plugin.unshareFolder(folderPath);
-            this.update();
+            this.display();
           });
         });
     }
@@ -485,12 +461,10 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         .addButton((button) => {
           button.setButtonText(this.plugin.t("remove")).onClick(async () => {
             await this.plugin.unshareNote(notePath);
-            this.update();
+            this.display();
           });
       });
     }
-      },
-    }];
   }
 
   renderAnalytics(containerEl: HTMLElement) {
@@ -503,11 +477,11 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
     const actions = new Setting(containerEl)
       .setDesc(this.plugin.t("uniqueEstimate", { days: this.plugin.config.analytics.retentionDays }))
       .addButton((button) => {
-        button.setButtonText(this.plugin.t("clearStatistics")).setDestructive().onClick(async () => {
+        button.setButtonText(this.plugin.t("clearStatistics")).setWarning().onClick(async () => {
           if (!await confirmAnalyticsReset(this.app, this.plugin)) return;
           await this.plugin.resetAnalytics();
           new Notice(this.plugin.t("statisticsCleared"));
-          this.update();
+          this.display();
         });
       });
     actions.settingEl.addClass("local-note-share-analytics-actions");
@@ -568,14 +542,14 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
     rootButton.disabled = !currentPath;
     rootButton.addEventListener("click", () => {
       this.currentFolder = "";
-      this.update();
+      this.display();
     });
 
     const parentButton = actionsEl.createEl("button", { text: this.plugin.t("up"), cls: "mod-muted" });
     parentButton.disabled = !currentPath;
     parentButton.addEventListener("click", () => {
       this.currentFolder = parentFolderPath(currentPath);
-      this.update();
+      this.display();
     });
 
     if (!isRoot) {
@@ -591,7 +565,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
           } else {
             await this.plugin.shareFolder(currentFolder);
           }
-          this.update();
+          this.display();
         });
       });
     }
@@ -627,7 +601,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
       });
       navButton.addEventListener("click", () => {
         this.currentFolder = folder.path;
-        this.update();
+        this.display();
       });
 
       const actions = row.createDiv({ cls: "local-note-share-browser-actions" });
@@ -641,7 +615,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
         runAsync(async () => {
           if (isShared) {
             await this.plugin.unshareFolder(folder.path);
-            this.update();
+            this.display();
             return;
           }
           if (isInherited) {
@@ -650,7 +624,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
             return;
           }
           await this.plugin.shareFolder(folder);
-          this.update();
+          this.display();
         });
       });
     }
@@ -678,7 +652,7 @@ export class LocalNoteShareSettingTab extends PluginSettingTab {
           }
 
           await this.plugin.shareNote(file);
-          this.update();
+          this.display();
         });
       });
     }
