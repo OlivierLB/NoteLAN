@@ -36,4 +36,15 @@ For local testing, copy or link the repository to `<vault>/.obsidian/plugins/loc
 
 Do not commit `data.json`, vault notes, `node_modules`, generated test directories, or personal tokens.
 
+## Governance and merging
+
+NoteLAN is maintained by [OlivierLB](https://github.com/OlivierLB), who retains final authority over changes to the project.
+
+- External changes must be submitted through a pull request.
+- The required CI checks must pass before a pull request can be merged.
+- Approval from `@OlivierLB`, the repository Code Owner, is required.
+- Review discussions must be resolved before merging.
+- A new push may require the latest changes to be approved again.
+- Releases are created only by `@OlivierLB`.
+
 By contributing, you agree that your contribution is licensed under the project's MIT License.
