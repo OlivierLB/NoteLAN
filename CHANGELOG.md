@@ -2,6 +2,12 @@
 
 All notable changes to NoteLAN are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-11-02
+
+### Added
+
+- Highlighted the current section in a shared note outline as readers scroll.
+
 ## [0.4.0] - 2026-11-02
 
 ### Added
@@ -58,6 +64,7 @@ All notable changes to NoteLAN are documented here. This project follows [Semant
 - Automatic English and French localization.
 - Local-network access controls, URL tokens, and security headers.
 
+[0.4.1]: https://github.com/OlivierLB/NoteLAN/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/OlivierLB/NoteLAN/compare/0.3.8...0.4.0
 [0.3.8]: https://github.com/OlivierLB/NoteLAN/compare/0.3.7...0.3.8
 [0.3.7]: https://github.com/OlivierLB/NoteLAN/compare/0.3.6...0.3.7

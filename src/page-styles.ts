@@ -277,6 +277,7 @@ export function pageStyles(settings: ThemeSettings): string {
     .note-outline li { margin: 2px 0; padding: 0; }
     .note-outline a { border-left: 2px solid transparent; color: var(--page-muted); display: block; font-size: 0.88rem; line-height: 1.4; overflow-wrap: anywhere; padding: 4px 8px; text-decoration: none; }
     .note-outline a:hover { border-left-color: var(--heading-pink); color: var(--page-link); }
+    .note-outline a[aria-current="location"] { background: var(--page-surface); border-left-color: var(--heading-pink); color: var(--page-link); font-weight: 700; }
     .note-outline-level-2 { margin-left: 0.6rem !important; }
     .note-outline-level-3 { margin-left: 1.2rem !important; }
     .note-outline-level-4 { margin-left: 1.8rem !important; }

@@ -2,6 +2,7 @@ import { Menu, Notice, Plugin, TAbstractFile, TFile, TFolder, moment, setIcon } 
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { randomBytes } from "node:crypto";
 import {
   createEmptyAnalyticsData,
   getAnonymousVisitorHash,
@@ -1103,6 +1104,40 @@ export default class LocalNoteSharePlugin extends Plugin {
     const back = notePath ? `<a class="back" href="${this.indexHref()}">${this.t("sharedNotes")}</a>` : "";
     const outlineMatch = notePath ? body.match(/<aside class="note-outline"[\s\S]*?<\/aside>/) : null;
     const content = outlineMatch ? body.replace(outlineMatch[0], "") : body;
+    const outlineScriptNonce = outlineMatch ? randomBytes(16).toString("base64") : "";
+    const outlineScript = outlineMatch
+      ? `<script nonce="${outlineScriptNonce}">
+(() => {
+  const links = Array.from(document.querySelectorAll(".note-outline a"));
+  const targets = links.map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))));
+  const setCurrentHeading = () => {
+    let currentIndex = 0;
+    targets.forEach((target, index) => {
+      if (target && target.getBoundingClientRect().top <= 120) currentIndex = index;
+    });
+    if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+      currentIndex = links.length - 1;
+    }
+    links.forEach((link, index) => {
+      if (index === currentIndex) link.setAttribute("aria-current", "location");
+      else link.removeAttribute("aria-current");
+    });
+  };
+  let framePending = false;
+  const updateCurrentHeading = () => {
+    if (framePending) return;
+    framePending = true;
+    window.requestAnimationFrame(() => {
+      framePending = false;
+      setCurrentHeading();
+    });
+  };
+  window.addEventListener("scroll", updateCurrentHeading, { passive: true });
+  window.addEventListener("resize", updateCurrentHeading);
+  setCurrentHeading();
+})();
+</script>`
+      : "";
     return `<!doctype html>
 <html lang="${this.locale}">
 <head>
@@ -1119,6 +1154,7 @@ ${outlineMatch ? '<div class="shared-note-layout">' : ""}
     ${content}
 </main>
 ${outlineMatch ? outlineMatch[0] : ""}
+${outlineScript}
 ${outlineMatch ? "</div>" : ""}
 </body>
 </html>`;
@@ -1173,10 +1209,12 @@ ${outlineMatch ? "</div>" : ""}
   }
 
   sendHtml(res: http.ServerResponse, status: number, html: string) {
+    const scriptNonce = html.match(/<script nonce="([A-Za-z0-9+/=]+)">/)?.[1];
+    const scriptPolicy = scriptNonce ? `script-src 'nonce-${scriptNonce}'; ` : "";
     res.writeHead(status, {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
-      "Content-Security-Policy": "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; font-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "Content-Security-Policy": `${scriptPolicy}default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; font-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
       "Referrer-Policy": "no-referrer",
       "X-Content-Type-Options": "nosniff",
     });

@@ -1,6 +1,6 @@
 {
   "name": "notelan",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "Share selected Obsidian notes and folders as read-only local web pages.",
   "author": {
