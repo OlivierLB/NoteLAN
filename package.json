@@ -33,7 +33,7 @@
     "validate": "npm run check && npm run lint && npm test && npm run build && npm run smoke"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
+    "@types/node": "^26.4.0",
     "eslint": "^9.39.0",
     "eslint-plugin-obsidianmd": "^0.4.0",
     "esbuild": "^0.25.0",
