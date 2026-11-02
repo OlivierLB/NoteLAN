@@ -269,7 +269,24 @@ export function pageStyles(settings: ThemeSettings): string {
       border-radius: 16px;
       padding: 16px;
     }
+    .shared-note-layout { display: grid; gap: 32px; grid-template-columns: minmax(0, 1fr) 240px; margin: 0 auto; max-width: 1440px; padding: 40px 24px 72px; }
+    .shared-note-layout main { margin: 0; max-width: none; min-width: 0; padding: 0; }
+    .shared-note-layout .note-outline { align-self: start; position: sticky; top: 24px; }
+    .note-outline h2 { border-bottom: 1px solid var(--page-border); font-size: 0.95rem; margin: 0; padding: 10px 14px; }
+    .note-outline ol { list-style: none; margin: 0; max-height: calc(100vh - 110px); overflow: auto; padding: 10px 12px; }
+    .note-outline li { margin: 2px 0; padding: 0; }
+    .note-outline a { border-left: 2px solid transparent; color: var(--page-muted); display: block; font-size: 0.88rem; line-height: 1.4; overflow-wrap: anywhere; padding: 4px 8px; text-decoration: none; }
+    .note-outline a:hover { border-left-color: var(--heading-pink); color: var(--page-link); }
+    .note-outline-level-2 { margin-left: 0.6rem !important; }
+    .note-outline-level-3 { margin-left: 1.2rem !important; }
+    .note-outline-level-4 { margin-left: 1.8rem !important; }
+    .note-outline-level-5 { margin-left: 2.4rem !important; }
+    .note-outline-level-6 { margin-left: 3rem !important; }
+
     @media (max-width: 720px) {
+      .shared-note-layout { display: flex; flex-direction: column; gap: 20px; padding: 24px 16px 56px; }
+      .shared-note-layout .note-outline { order: -1; position: static; }
+      .note-outline ol { max-height: 35vh; }
       main { padding: 24px 16px 56px; }
       .vault-toolbar,
       .vault-hero-main { align-items: flex-start; flex-direction: column; }

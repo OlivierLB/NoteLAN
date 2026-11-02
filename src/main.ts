@@ -888,6 +888,7 @@ export default class LocalNoteSharePlugin extends Plugin {
     const rawMarkdown = this.stripFrontmatter(markdown);
     const lines = rawMarkdown.replace(/\r\n/g, "\n").split("\n");
     const blocks: string[] = [];
+    const headings: Array<{ level: number; text: string; id: string }> = [];
     let paragraph: string[] = [];
     let list: { type: "ul" | "ol"; items: string[] } | null = null;
     let inFence = false;
@@ -957,6 +958,7 @@ export default class LocalNoteSharePlugin extends Plugin {
         const level = heading[1].length;
         const headingText = heading[2].trim();
         const headingId = this.headingIdFor(headingText);
+        headings.push({ level, text: headingText, id: headingId });
         blocks.push(`<h${level} id="${headingId}">${this.renderInline(headingText, sourcePath)}</h${level}>`);
         continue;
       }
@@ -993,7 +995,27 @@ export default class LocalNoteSharePlugin extends Plugin {
     flushParagraph();
     flushList();
 
-    return blocks.join("\n");
+    const rendered = blocks.join("\n");
+    return headings.length ? `${this.renderNoteOutline(headings)}\n${rendered}` : rendered;
+  }
+
+  renderNoteOutline(headings: Array<{ level: number; text: string; id: string }>) {
+    const items = headings
+      .map(({ level, text, id }) => {
+        const label = text
+          .replace(
+            /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
+            (_match, target: string, alias?: string) =>
+              alias || target.split("#")[0].split("/").pop() || target,
+          )
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+          .replace(/[*_~`]/g, "");
+        return `<li class="note-outline-level-${level}"><a href="#${encodeURIComponent(id)}">${escapeHtml(label)}</a></li>`;
+      })
+      .join("");
+
+    const title = escapeHtml(this.t("noteOutline"));
+    return `<aside class="note-outline" aria-label="${title}"><h2>${title}</h2><nav><ol>${items}</ol></nav></aside>`;
   }
 
   renderInline(text: string, sourcePath: string) {
@@ -1079,6 +1101,8 @@ export default class LocalNoteSharePlugin extends Plugin {
 
   renderPage(title: string, body: string, notePath = "") {
     const back = notePath ? `<a class="back" href="${this.indexHref()}">${this.t("sharedNotes")}</a>` : "";
+    const outlineMatch = notePath ? body.match(/<aside class="note-outline"[\s\S]*?<\/aside>/) : null;
+    const content = outlineMatch ? body.replace(outlineMatch[0], "") : body;
     return `<!doctype html>
 <html lang="${this.locale}">
 <head>
@@ -1088,11 +1112,14 @@ export default class LocalNoteSharePlugin extends Plugin {
   <style>${pageStyles(this.config.theme)}</style>
 </head>
 <body>
-  <main>
+${outlineMatch ? '<div class="shared-note-layout">' : ""}
+<main>
     ${back}
     <h1>${escapeHtml(title)}</h1>
-    ${body}
-  </main>
+    ${content}
+</main>
+${outlineMatch ? outlineMatch[0] : ""}
+${outlineMatch ? "</div>" : ""}
 </body>
 </html>`;
   }
